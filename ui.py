@@ -95,6 +95,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.processing_active = False
         self.exit_after_cancel = False
         self.completed_output_dirs: set[Path] = set()
+        self.desktop_path = Path.home() / "Desktop"
 
         self.queue_entries: dict[Path, QueueFileEntry] = {}
         self.row_widgets: dict[Path, ctk.CTkFrame] = {}
@@ -106,7 +107,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.format_var = tk.StringVar(value=str(defaults.get("format", "JPEG")))
         self.quality_var = tk.IntVar(value=int(defaults.get("quality", 85)))
         self.output_mode_var = tk.StringVar(value=str(defaults.get("output_mode", "same")))
-        self.custom_output_var = tk.StringVar(value=str(defaults.get("output_dir", "")))
+        self.custom_output_var = tk.StringVar(value=str(defaults.get("output_dir", self.desktop_path)))
         self.conflict_var = tk.StringVar(value=str(defaults.get("conflict_mode", "auto-rename")))
         self.include_subfolders_var = tk.BooleanVar(value=bool(defaults.get("include_subfolders", False)))
         self.log_visible = False
@@ -174,6 +175,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.right_panel = ctk.CTkFrame(self.main_frame, width=260)
         self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
         self.right_panel.grid_propagate(False)
+        self.right_panel.grid_rowconfigure(0, weight=1)
         self.right_panel.grid_columnconfigure(0, weight=1)
 
         self.bottom_bar = ctk.CTkFrame(self, height=94)
@@ -246,36 +248,41 @@ class PdfDeinjectionApp(CTkDnD):
         self.meta_estimated.grid(row=1, column=1, sticky="ew", padx=10, pady=(0, 10))
 
     def _build_right_panel(self) -> None:
+        self.settings_panel = ctk.CTkScrollableFrame(self.right_panel, fg_color="transparent")
+        self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        self.settings_panel.grid_columnconfigure(0, weight=1)
+
+        panel = self.settings_panel
         row = 0
-        ctk.CTkLabel(self.right_panel, text="Resolution", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(14, 6))
+        ctk.CTkLabel(panel, text="Resolution", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(14, 6))
         row += 1
 
-        dpi_row = ctk.CTkFrame(self.right_panel, fg_color="transparent")
+        dpi_row = ctk.CTkFrame(panel, fg_color="transparent")
         dpi_row.grid(row=row, column=0, sticky="ew", padx=14)
         dpi_row.grid_columnconfigure(0, weight=1)
         self.dpi_value_label = ctk.CTkLabel(dpi_row, text=f"{self.dpi_var.get()} DPI")
         self.dpi_value_label.grid(row=0, column=1, sticky="e")
         row += 1
 
-        self.dpi_slider = ctk.CTkSlider(self.right_panel, from_=72, to=300, number_of_steps=228, variable=self.dpi_var, command=self.on_dpi_changed)
+        self.dpi_slider = ctk.CTkSlider(panel, from_=72, to=300, number_of_steps=228, variable=self.dpi_var, command=self.on_dpi_changed)
         self.dpi_slider.grid(row=row, column=0, sticky="ew", padx=14, pady=(4, 8))
         row += 1
 
-        preset_row = ctk.CTkFrame(self.right_panel, fg_color="transparent")
+        preset_row = ctk.CTkFrame(panel, fg_color="transparent")
         preset_row.grid(row=row, column=0, sticky="ew", padx=14)
         preset_row.grid_columnconfigure((0, 1, 2, 3), weight=1)
         for column, value in enumerate(PRESET_DPI_VALUES):
             ctk.CTkButton(preset_row, text=str(value), width=44, command=lambda preset=value: self.set_dpi(preset)).grid(row=0, column=column, sticky="ew", padx=3)
         row += 1
 
-        ctk.CTkLabel(self.right_panel, text="Format", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
+        ctk.CTkLabel(panel, text="Format", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
         row += 1
 
-        self.format_selector = ctk.CTkSegmentedButton(self.right_panel, values=["JPEG", "PNG"], variable=self.format_var, command=self.on_format_changed)
+        self.format_selector = ctk.CTkSegmentedButton(panel, values=["JPEG", "PNG"], variable=self.format_var, command=self.on_format_changed)
         self.format_selector.grid(row=row, column=0, sticky="ew", padx=14)
         row += 1
 
-        self.quality_frame = ctk.CTkFrame(self.right_panel, fg_color="transparent")
+        self.quality_frame = ctk.CTkFrame(panel, fg_color="transparent")
         self.quality_frame.grid(row=row, column=0, sticky="ew", padx=14, pady=(12, 0))
         self.quality_frame.grid_columnconfigure(0, weight=1)
         self.quality_label = ctk.CTkLabel(self.quality_frame, text=f"JPEG Quality: {self.quality_var.get()}")
@@ -284,17 +291,17 @@ class PdfDeinjectionApp(CTkDnD):
         self.quality_slider.grid(row=1, column=0, sticky="ew", pady=(4, 0))
         row += 1
 
-        ctk.CTkLabel(self.right_panel, text="Output Location", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
+        ctk.CTkLabel(panel, text="Output Location", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
         row += 1
 
-        self.same_folder_radio = ctk.CTkRadioButton(self.right_panel, text="Same folder as source", variable=self.output_mode_var, value="same", command=self._update_output_mode_state)
+        self.same_folder_radio = ctk.CTkRadioButton(panel, text="Same folder as source", variable=self.output_mode_var, value="same", command=self._update_output_mode_state)
         self.same_folder_radio.grid(row=row, column=0, sticky="w", padx=14)
         row += 1
-        self.custom_folder_radio = ctk.CTkRadioButton(self.right_panel, text="Custom folder", variable=self.output_mode_var, value="custom", command=self._update_output_mode_state)
+        self.custom_folder_radio = ctk.CTkRadioButton(panel, text="Custom folder", variable=self.output_mode_var, value="custom", command=self._update_output_mode_state)
         self.custom_folder_radio.grid(row=row, column=0, sticky="w", padx=14, pady=(4, 0))
         row += 1
 
-        self.custom_folder_frame = ctk.CTkFrame(self.right_panel, fg_color="transparent")
+        self.custom_folder_frame = ctk.CTkFrame(panel, fg_color="transparent")
         self.custom_folder_frame.grid(row=row, column=0, sticky="ew", padx=14, pady=(6, 0))
         self.custom_folder_frame.grid_columnconfigure(0, weight=1)
         self.custom_folder_entry = ctk.CTkEntry(self.custom_folder_frame, textvariable=self.custom_output_var, state="readonly")
@@ -302,17 +309,16 @@ class PdfDeinjectionApp(CTkDnD):
         ctk.CTkButton(self.custom_folder_frame, text="Browse", width=72, command=self.browse_output_folder).grid(row=0, column=1)
         row += 1
 
-        ctk.CTkLabel(self.right_panel, text="File Conflict", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
+        ctk.CTkLabel(panel, text="File Conflict", font=ctk.CTkFont(size=16, weight="bold")).grid(row=row, column=0, sticky="w", padx=14, pady=(16, 6))
         row += 1
-        ctk.CTkRadioButton(self.right_panel, text="Overwrite", variable=self.conflict_var, value="overwrite").grid(row=row, column=0, sticky="w", padx=14)
+        ctk.CTkRadioButton(panel, text="Overwrite", variable=self.conflict_var, value="overwrite").grid(row=row, column=0, sticky="w", padx=14)
         row += 1
-        ctk.CTkRadioButton(self.right_panel, text="Skip", variable=self.conflict_var, value="skip").grid(row=row, column=0, sticky="w", padx=14, pady=(4, 0))
+        ctk.CTkRadioButton(panel, text="Skip", variable=self.conflict_var, value="skip").grid(row=row, column=0, sticky="w", padx=14, pady=(4, 0))
         row += 1
-        ctk.CTkRadioButton(self.right_panel, text="Auto-rename", variable=self.conflict_var, value="auto-rename").grid(row=row, column=0, sticky="w", padx=14, pady=(4, 0))
+        ctk.CTkRadioButton(panel, text="Auto-rename", variable=self.conflict_var, value="auto-rename").grid(row=row, column=0, sticky="w", padx=14, pady=(4, 0))
         row += 1
 
-        ctk.CTkFrame(self.right_panel, height=2).grid(row=row, column=0, sticky="ew", padx=14, pady=(16, 16))
-        row += 1
+        ctk.CTkFrame(panel, height=2).grid(row=row, column=0, sticky="ew", padx=14, pady=(16, 16))
 
         self.start_button = ctk.CTkButton(
             self.right_panel,
@@ -322,7 +328,7 @@ class PdfDeinjectionApp(CTkDnD):
             height=44,
             command=self.on_start_cancel,
         )
-        self.start_button.grid(row=row, column=0, sticky="ew", padx=14, pady=(0, 14))
+        self.start_button.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
 
     def _build_bottom_bar(self) -> None:
         progress_panel = ctk.CTkFrame(self.bottom_bar, fg_color="transparent")
@@ -524,12 +530,16 @@ class PdfDeinjectionApp(CTkDnD):
         self.file_progress.set(0 if total_pages == 0 else page_index / total_pages)
 
     def add_files_dialog(self) -> None:
-        paths = filedialog.askopenfilenames(title="Select PDF files", filetypes=[("PDF files", "*.pdf")])
+        paths = filedialog.askopenfilenames(
+            title="Select PDF files",
+            filetypes=[("PDF files", "*.pdf")],
+            initialdir=self.desktop_path,
+        )
         if paths:
             self.add_paths([Path(path) for path in paths])
 
     def add_folder_dialog(self) -> None:
-        folder = filedialog.askdirectory(title="Select folder")
+        folder = filedialog.askdirectory(title="Select folder", initialdir=self.desktop_path)
         if folder:
             self.add_paths([Path(folder)])
 
@@ -618,7 +628,10 @@ class PdfDeinjectionApp(CTkDnD):
         self.quality_label.configure(text=f"JPEG Quality: {quality}")
 
     def browse_output_folder(self) -> None:
-        folder = filedialog.askdirectory(title="Select output folder")
+        folder = filedialog.askdirectory(
+            title="Select output folder",
+            initialdir=self.custom_output_var.get() or str(self.desktop_path),
+        )
         if folder:
             self.custom_output_var.set(folder)
 

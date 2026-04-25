@@ -42,6 +42,11 @@ STATUS_COLORS = {
 }
 
 PRESET_DPI_VALUES = (96, 150, 200, 300)
+DEFAULT_WINDOW_WIDTH = 1360
+DEFAULT_WINDOW_HEIGHT = 900
+MIN_WINDOW_WIDTH = 1180
+MIN_WINDOW_HEIGHT = 760
+SIDE_PANEL_WIDTH = 300
 
 
 @dataclass(slots=True)
@@ -77,8 +82,8 @@ class PdfDeinjectionApp(CTkDnD):
     ) -> None:
         super().__init__()
         self.title("PDF Deinjection")
-        self.geometry("960x660")
-        self.minsize(800, 560)
+        self.geometry(f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}")
+        self.minsize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
@@ -111,7 +116,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.conflict_var = tk.StringVar(value=str(defaults.get("conflict_mode", "auto-rename")))
         self.include_subfolders_var = tk.BooleanVar(value=bool(defaults.get("include_subfolders", False)))
         self.log_visible = False
-        self.last_window_geometry = str(defaults.get("window_geometry", "960x660"))
+        self.last_window_geometry = str(defaults.get("window_geometry", f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"))
 
         self._build_layout()
         self._restore_geometry(defaults.get("window_geometry"))
@@ -156,12 +161,12 @@ class PdfDeinjectionApp(CTkDnD):
 
         self.main_frame = ctk.CTkFrame(self, corner_radius=0)
         self.main_frame.grid(row=0, column=0, sticky="nsew")
-        self.main_frame.grid_columnconfigure(0, weight=0, minsize=260)
+        self.main_frame.grid_columnconfigure(0, weight=0, minsize=SIDE_PANEL_WIDTH)
         self.main_frame.grid_columnconfigure(1, weight=1)
-        self.main_frame.grid_columnconfigure(2, weight=0, minsize=260)
+        self.main_frame.grid_columnconfigure(2, weight=0, minsize=SIDE_PANEL_WIDTH)
         self.main_frame.grid_rowconfigure(0, weight=1)
 
-        self.left_panel = ctk.CTkFrame(self.main_frame, width=260)
+        self.left_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH)
         self.left_panel.grid(row=0, column=0, sticky="nsew", padx=(12, 6), pady=12)
         self.left_panel.grid_propagate(False)
         self.left_panel.grid_rowconfigure(1, weight=1)
@@ -172,7 +177,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.center_panel.grid_rowconfigure(0, weight=1)
         self.center_panel.grid_columnconfigure(0, weight=1)
 
-        self.right_panel = ctk.CTkFrame(self.main_frame, width=260)
+        self.right_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH)
         self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
         self.right_panel.grid_propagate(False)
         self.right_panel.grid_rowconfigure(0, weight=1)
@@ -384,11 +389,31 @@ class PdfDeinjectionApp(CTkDnD):
             pass
 
     def _restore_geometry(self, geometry: str | None) -> None:
-        if geometry:
-            try:
-                self.geometry(geometry)
-            except tk.TclError:
-                pass
+        target_geometry = self._normalize_geometry(geometry)
+        try:
+            self.geometry(target_geometry)
+            self.last_window_geometry = target_geometry
+        except tk.TclError:
+            fallback_geometry = f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+            self.geometry(fallback_geometry)
+            self.last_window_geometry = fallback_geometry
+
+    def _normalize_geometry(self, geometry: str | None) -> str:
+        if not geometry:
+            return f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+
+        size_part, _, offset_part = geometry.partition("+")
+        try:
+            width_str, height_str = size_part.split("x", maxsplit=1)
+            width = max(MIN_WINDOW_WIDTH, int(width_str))
+            height = max(MIN_WINDOW_HEIGHT, int(height_str))
+        except (ValueError, TypeError):
+            return f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+
+        if offset_part:
+            offsets = geometry[len(size_part):]
+            return f"{width}x{height}{offsets}"
+        return f"{width}x{height}"
 
     def _refresh_queue_list(self) -> None:
         for child in self.file_list.winfo_children():

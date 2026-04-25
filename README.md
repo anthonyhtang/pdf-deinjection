@@ -85,6 +85,10 @@ Generated files:
 - Cancel support with partial-file cleanup
 - uv-managed environment and PyInstaller packaging
 
+## Screenshot
+
+![PDF Deinjection GUI](screenshot.png)
+
 ## License
 
 MIT

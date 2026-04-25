@@ -4,11 +4,11 @@ A Windows desktop app that rasterizes PDFs into image-only PDFs to remove hidden
 
 ## Motivation
 
-Recent discussion around ICML 2026 LLM watermarking and PDF prompt injection attacks has highlighted a practical risk in automated review workflows: hidden text or metadata inside PDFs can steer LLM-based tools in ways that are invisible to human reviewers. PDF Deinjection is intended to neutralize that class of attack by rendering each page to pixels and rebuilding a clean image-based PDF.
+Many PDFs can contain hidden prompt injection text, invisible layers, or metadata intended to manipulate LLM-based workflows. PDF Deinjection removes that hidden content by rendering each page into a plain image and rebuilding a clean PDF from those rasterized pages.
 
 ## Installation
 
-Placeholder. Installation instructions will be added after the application modules and packaging flow are complete.
+Placeholder. Installation instructions will be updated for a uv-based workflow after the application modules and packaging flow are complete.
 
 ## Usage
 

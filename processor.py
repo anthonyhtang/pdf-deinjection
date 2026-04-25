@@ -4,6 +4,7 @@ import shutil
 import tempfile
 import threading
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Literal
 
@@ -32,6 +33,18 @@ class FileProcessResult:
     total_pages: int = 0
     processed_pages: int = 0
     skipped: bool = False
+
+
+@dataclass(slots=True)
+class PdfFileInfo:
+    """Summary metadata used by the UI for one queued PDF file."""
+
+    path: Path
+    page_count: int
+    file_size: int
+    estimated_output_size: int
+    width_points: float
+    height_points: float
 
 
 @dataclass(slots=True)
@@ -83,7 +96,20 @@ def estimate_page_output_size(page: fitz.Page, dpi: int, image_format: OutputFor
     width_px = max(1, int(round(page.rect.width * scale)))
     height_px = max(1, int(round(page.rect.height * scale)))
     compression_ratio = 10 if image_format == "JPEG" else 3
-    return int((page.number + 1) * 0 + (width_px * height_px * 3) / compression_ratio)
+    return int((width_px * height_px * 3) / compression_ratio)
+
+
+def format_bytes(num_bytes: int) -> str:
+    """Return a human-readable string for a byte count."""
+
+    units = ["B", "KB", "MB", "GB", "TB"]
+    size = float(num_bytes)
+    for unit in units:
+        if size < 1024 or unit == units[-1]:
+            if unit == "B":
+                return f"{int(size)} {unit}"
+            return f"{size:.1f} {unit}"
+        size /= 1024
 
 
 def estimate_pdf_output_size(source_path: Path, dpi: int, image_format: OutputFormat) -> int:
@@ -98,6 +124,85 @@ def estimate_pdf_output_size(source_path: Path, dpi: int, image_format: OutputFo
         return sum(estimate_page_output_size(document.load_page(i), dpi, image_format) for i in range(document.page_count))
     finally:
         document.close()
+
+
+def read_pdf_info(source_path: Path, dpi: int, image_format: OutputFormat) -> PdfFileInfo:
+    """Read metadata needed by the UI for one PDF file."""
+
+    document = fitz.open(source_path)
+    try:
+        if document.needs_pass:
+            raise ValueError("Password-protected PDF")
+        if document.page_count == 0:
+            raise ValueError("PDF contains zero pages")
+
+        first_page = document.load_page(0)
+        estimated_output_size = sum(
+            estimate_page_output_size(document.load_page(index), dpi, image_format)
+            for index in range(document.page_count)
+        )
+        return PdfFileInfo(
+            path=source_path,
+            page_count=document.page_count,
+            file_size=source_path.stat().st_size,
+            estimated_output_size=estimated_output_size,
+            width_points=float(first_page.rect.width),
+            height_points=float(first_page.rect.height),
+        )
+    finally:
+        document.close()
+
+
+def render_preview(source_path: Path, dpi: int = 96) -> Image.Image:
+    """Render the first page of a PDF into a PIL image for preview."""
+
+    document = fitz.open(source_path)
+    try:
+        if document.needs_pass:
+            raise ValueError("Password-protected PDF")
+        if document.page_count == 0:
+            raise ValueError("PDF contains zero pages")
+        page = document.load_page(0)
+        matrix = fitz.Matrix(dpi / 72.0, dpi / 72.0)
+        pixmap = page.get_pixmap(matrix=matrix, colorspace=fitz.csRGB, alpha=False)
+        return Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples)
+    finally:
+        document.close()
+
+
+def collect_pdf_files(paths: list[Path], include_subfolders: bool = False) -> list[Path]:
+    """Collect PDF files from explicit paths and folder inputs."""
+
+    collected: set[Path] = set()
+    for path in paths:
+        resolved = path.resolve()
+        if resolved.is_file() and resolved.suffix.lower() == ".pdf":
+            collected.add(resolved)
+            continue
+        if resolved.is_dir():
+            pattern = "**/*.pdf" if include_subfolders else "*.pdf"
+            for candidate in resolved.glob(pattern):
+                if candidate.is_file():
+                    collected.add(candidate.resolve())
+    return sorted(collected)
+
+
+def build_log_entry(
+    source_path: Path,
+    output_path: Path | None,
+    dpi: int,
+    image_format: OutputFormat,
+    jpeg_quality: int,
+    success: bool,
+    message: str,
+) -> str:
+    """Return a formatted log line for the UI log panel."""
+
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    if success:
+        quality_segment = f" {image_format}:{jpeg_quality}" if image_format == "JPEG" else f" {image_format}"
+        return f"[{timestamp}] {source_path.name} → {output_path} | DPI:{dpi}{quality_segment} | {message}"
+    return f"[{timestamp}] {source_path.name} | ERROR: {message}"
 
 
 def check_batch_disk_space(

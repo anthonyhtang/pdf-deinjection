@@ -11,7 +11,7 @@ from tkinter import filedialog, messagebox
 from typing import Any
 
 import customtkinter as ctk
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from processor import (
@@ -34,11 +34,11 @@ STATUS_ICONS = {
 }
 
 STATUS_COLORS = {
-    "pending": ("#263042", "#263042"),
-    "processing": ("#334155", "#334155"),
-    "done": ("#163d2a", "#163d2a"),
-    "error": ("#4a1f24", "#4a1f24"),
-    "skipped": ("#3b341f", "#3b341f"),
+    "pending": ("#edf3fb", "#edf3fb"),
+    "processing": ("#d9e8fb", "#d9e8fb"),
+    "done": ("#ddf4e6", "#ddf4e6"),
+    "error": ("#fde8ea", "#fde8ea"),
+    "skipped": ("#f9f0d8", "#f9f0d8"),
 }
 
 PRESET_DPI_VALUES = (96, 150, 200, 300)
@@ -79,7 +79,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.title("PDF Deinjection")
         self.geometry("960x660")
         self.minsize(800, 560)
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
 
         self.icon_path = icon_path
@@ -110,6 +110,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.conflict_var = tk.StringVar(value=str(defaults.get("conflict_mode", "auto-rename")))
         self.include_subfolders_var = tk.BooleanVar(value=bool(defaults.get("include_subfolders", False)))
         self.log_visible = False
+        self.last_window_geometry = str(defaults.get("window_geometry", "960x660"))
 
         self._build_layout()
         self._restore_geometry(defaults.get("window_geometry"))
@@ -124,6 +125,17 @@ class PdfDeinjectionApp(CTkDnD):
     def get_persisted_config(self) -> dict[str, Any]:
         """Return the app settings that should be written to config.json."""
 
+        try:
+            exists = bool(self.winfo_exists())
+        except tk.TclError:
+            exists = False
+
+        if exists:
+            try:
+                self.last_window_geometry = self.geometry()
+            except tk.TclError:
+                pass
+
         return {
             "dpi": int(self.dpi_var.get()),
             "format": self.format_var.get(),
@@ -132,7 +144,7 @@ class PdfDeinjectionApp(CTkDnD):
             "output_dir": self.custom_output_var.get().strip(),
             "conflict_mode": self.conflict_var.get(),
             "include_subfolders": bool(self.include_subfolders_var.get()),
-            "window_geometry": self.geometry(),
+            "window_geometry": self.last_window_geometry,
         }
 
     def _build_layout(self) -> None:
@@ -180,7 +192,7 @@ class PdfDeinjectionApp(CTkDnD):
         self._build_log_panel()
 
     def _build_left_panel(self) -> None:
-        self.drop_zone = ctk.CTkFrame(self.left_panel, fg_color=("#182235", "#182235"), corner_radius=12)
+        self.drop_zone = ctk.CTkFrame(self.left_panel, fg_color=("#eef5ff", "#eef5ff"), corner_radius=12)
         self.drop_zone.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 10))
         self.drop_zone.grid_columnconfigure(0, weight=1)
 
@@ -190,12 +202,12 @@ class PdfDeinjectionApp(CTkDnD):
             bd=0,
             highlightthickness=0,
             relief="flat",
-            background="#182235",
+            background="#eef5ff",
         )
         self.drop_canvas.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
-        self.drop_canvas.create_rectangle(12, 12, 220, 124, outline="#5d7296", width=2, dash=(6, 4))
-        self.drop_canvas.create_text(116, 44, text="PDF", fill="#f7f8fb", font=("Segoe UI", 24, "bold"))
-        self.drop_canvas.create_text(116, 88, text="Drop PDFs here", fill="#d9e2f2", font=("Segoe UI", 13))
+        self.drop_canvas.create_rectangle(12, 12, 220, 124, outline="#7ca0d6", width=2, dash=(6, 4))
+        self.drop_canvas.create_text(116, 44, text="PDF", fill="#1f4a8a", font=("Segoe UI", 24, "bold"))
+        self.drop_canvas.create_text(116, 88, text="Drop PDFs here", fill="#4e6e9d", font=("Segoe UI", 13))
 
         self.file_list = ctk.CTkScrollableFrame(self.left_panel, label_text="Queue")
         self.file_list.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
@@ -357,6 +369,13 @@ class PdfDeinjectionApp(CTkDnD):
         self.drop_zone.dnd_bind("<<Drop>>", self.on_drop_files)
         self.drop_canvas.drop_target_register(DND_FILES)
         self.drop_canvas.dnd_bind("<<Drop>>", self.on_drop_files)
+        self.bind("<Configure>", self._on_configure)
+
+    def _on_configure(self, _event: tk.Event) -> None:
+        try:
+            self.last_window_geometry = self.geometry()
+        except tk.TclError:
+            pass
 
     def _restore_geometry(self, geometry: str | None) -> None:
         if geometry:
@@ -374,7 +393,7 @@ class PdfDeinjectionApp(CTkDnD):
             selected = entry.path == self.selected_path
             row = ctk.CTkFrame(
                 self.file_list,
-                fg_color=("#314056", "#314056") if selected else STATUS_COLORS.get(entry.status, ("#263042", "#263042")),
+                fg_color=("#cfe2ff", "#cfe2ff") if selected else STATUS_COLORS.get(entry.status, ("#edf3fb", "#edf3fb")),
             )
             row.grid(row=index, column=0, sticky="ew", padx=4, pady=4)
             row.grid_columnconfigure(1, weight=1)
@@ -385,7 +404,7 @@ class PdfDeinjectionApp(CTkDnD):
             name_label = ctk.CTkLabel(row, text=self._truncate_filename(entry.path.name), anchor="w")
             name_label.grid(row=0, column=1, sticky="ew", pady=(6, 0), padx=(0, 6))
             page_text = f"{entry.page_count} pages" if entry.page_count > 0 else "-"
-            page_label = ctk.CTkLabel(row, text=page_text, anchor="w", text_color="#b9c5d8")
+            page_label = ctk.CTkLabel(row, text=page_text, anchor="w", text_color="#5f718c")
             page_label.grid(row=1, column=1, sticky="ew", pady=(0, 6), padx=(0, 6))
 
             for widget in (row, icon_label, name_label, page_label):
@@ -433,16 +452,34 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _show_preview_placeholder(self, message: str | None = None) -> None:
         placeholder = message or "Select a PDF to preview"
-        if self.icon_path is not None and self.icon_path.exists():
-            try:
-                icon_image = Image.open(self.icon_path)
-                fitted = ImageOps.contain(icon_image.convert("RGBA"), (180, 180))
-                self.preview_photo = ctk.CTkImage(light_image=fitted, dark_image=fitted, size=fitted.size)
-                self.preview_label.configure(image=self.preview_photo, text=f"\n{placeholder}", font=ctk.CTkFont(size=16))
-                return
-            except Exception:
-                pass
-        self.preview_label.configure(image=None, text=placeholder, font=ctk.CTkFont(size=16))
+        placeholder_image = self._create_placeholder_image()
+        self.preview_photo = ctk.CTkImage(light_image=placeholder_image, dark_image=placeholder_image, size=placeholder_image.size)
+        self.preview_label.configure(
+            image=self.preview_photo,
+            text=f"\n{placeholder}",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="#486284",
+        )
+
+    def _create_placeholder_image(self) -> Image.Image:
+        image = Image.new("RGBA", (420, 420), "#f7fbff")
+        draw = ImageDraw.Draw(image)
+
+        draw.rounded_rectangle((26, 26, 394, 394), radius=28, fill="#eef5ff", outline="#d2e3fb", width=2)
+        draw.rounded_rectangle((104, 74, 296, 324), radius=24, fill="#ffffff", outline="#bed2ef", width=3)
+        draw.polygon([(250, 74), (296, 74), (296, 122)], fill="#dde8f9", outline="#bed2ef")
+
+        draw.rounded_rectangle((135, 280, 265, 298), radius=9, fill="#d8e6f8")
+        draw.rounded_rectangle((150, 312, 250, 330), radius=9, fill="#e3eefc")
+
+        draw.rounded_rectangle((214, 210, 314, 248), radius=12, fill="#ee7d5b")
+        draw.rectangle((314, 225, 344, 233), fill="#ee7d5b")
+        draw.rectangle((194, 223, 214, 235), fill="#ee7d5b")
+        draw.line((200, 320, 342, 192), fill="#d94841", width=11)
+        draw.ellipse((60, 308, 118, 366), fill="#d7e9ff")
+        draw.text((74, 322), "PDF", fill="#22508f")
+
+        return image
 
     def _update_metadata_strip(self) -> None:
         if self.selected_path is None or self.selected_path not in self.queue_entries:

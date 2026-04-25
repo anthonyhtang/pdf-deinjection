@@ -6,6 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ICON_SIZES = [16, 32, 48, 64, 128, 256]
+SOURCE_ICON_NAME = "icon.png"
 BACKGROUND_COLOR = "#1a2744"
 DOCUMENT_COLOR = "#f7f8fb"
 FOLD_COLOR = "#d8ddeb"
@@ -89,11 +90,29 @@ def _render_icon(size: int) -> Image.Image:
     return image
 
 
+def _render_icon_from_source(source_image: Image.Image, size: int) -> Image.Image:
+    """Resize the provided source art into one icon frame."""
+
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    resized = source_image.copy()
+    resized.thumbnail((size, size), Image.Resampling.LANCZOS)
+    x = (size - resized.width) // 2
+    y = (size - resized.height) // 2
+    canvas.alpha_composite(resized, (x, y))
+    return canvas
+
+
 def generate_icon(output_path: Path | None = None) -> Path:
     """Generate the multi-size application icon and return its path."""
 
     target_path = output_path or Path(__file__).with_name("icon.ico")
-    frames = [_render_icon(size) for size in ICON_SIZES]
+    source_path = Path(__file__).with_name(SOURCE_ICON_NAME)
+    if source_path.exists():
+        with Image.open(source_path) as source_image:
+            prepared_source = source_image.convert("RGBA")
+            frames = [_render_icon_from_source(prepared_source, size) for size in ICON_SIZES]
+    else:
+        frames = [_render_icon(size) for size in ICON_SIZES]
     frames[0].save(target_path, format="ICO", sizes=[(size, size) for size in ICON_SIZES])
     return target_path
 

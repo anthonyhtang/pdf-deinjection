@@ -43,15 +43,15 @@ STATUS_COLORS = {
 
 PRESET_DPI_VALUES = (96, 150, 200, 300)
 IDEAL_WINDOW_WIDTH = 1360
-IDEAL_WINDOW_HEIGHT = 900
+IDEAL_WINDOW_HEIGHT = 1200
 BASE_MIN_WINDOW_WIDTH = 1040
-BASE_MIN_WINDOW_HEIGHT = 720
+BASE_MIN_WINDOW_HEIGHT = 880
 SIDE_PANEL_WIDTH = 300
 SIDE_PANEL_MIN_ACTUAL = 248
 SIDE_PANEL_MAX_ACTUAL = 336
-RIGHT_PANEL_WIDTH = 348
-RIGHT_PANEL_MIN_ACTUAL = 320
-RIGHT_PANEL_MAX_ACTUAL = 408
+RIGHT_PANEL_WIDTH = 372
+RIGHT_PANEL_MIN_ACTUAL = 336
+RIGHT_PANEL_MAX_ACTUAL = 432
 APP_BG_COLOR = "#f4f6f8"
 SURFACE_COLOR = "#f4f6f8"
 CARD_COLOR = "#eef3f8"
@@ -173,12 +173,12 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _compute_min_window_size(self) -> tuple[int, int]:
         min_width_actual = min(1240, max(BASE_MIN_WINDOW_WIDTH, int(self.screen_width * 0.52)))
-        min_height_actual = min(820, max(BASE_MIN_WINDOW_HEIGHT, int(self.screen_height * 0.62)))
+        min_height_actual = min(int(self.screen_height * 0.82), max(BASE_MIN_WINDOW_HEIGHT, int(self.screen_height * 0.72)))
         return self._to_logical_window_size(min_width_actual, min_height_actual)
 
     def _compute_default_window_size(self) -> tuple[int, int]:
         default_width_actual = min(IDEAL_WINDOW_WIDTH, max(1180, int(self.screen_width * 0.68)))
-        default_height_actual = min(IDEAL_WINDOW_HEIGHT, max(760, int(self.screen_height * 0.76)))
+        default_height_actual = min(int(self.screen_height * 0.9), max(1000, int(self.screen_height * 0.88)))
         default_width, default_height = self._to_logical_window_size(default_width_actual, default_height_actual)
         default_width = max(self.min_window_width, default_width)
         default_height = max(self.min_window_height, default_height)
@@ -452,7 +452,7 @@ class PdfDeinjectionApp(CTkDnD):
             return
 
         left_panel_width_actual = max(SIDE_PANEL_MIN_ACTUAL, min(SIDE_PANEL_MAX_ACTUAL, int(width * 0.22)))
-        right_panel_width_actual = max(RIGHT_PANEL_MIN_ACTUAL, min(RIGHT_PANEL_MAX_ACTUAL, int(width * 0.27)))
+        right_panel_width_actual = max(RIGHT_PANEL_MIN_ACTUAL, min(RIGHT_PANEL_MAX_ACTUAL, int(width * 0.285)))
         left_panel_width = max(190, int(round(left_panel_width_actual / self.window_scaling)))
         right_panel_width = max(220, int(round(right_panel_width_actual / self.window_scaling)))
 

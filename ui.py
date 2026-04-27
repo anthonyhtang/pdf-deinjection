@@ -42,10 +42,10 @@ STATUS_COLORS = {
 }
 
 PRESET_DPI_VALUES = (96, 150, 200, 300)
-DEFAULT_WINDOW_WIDTH = 1360
-DEFAULT_WINDOW_HEIGHT = 900
-MIN_WINDOW_WIDTH = 1180
-MIN_WINDOW_HEIGHT = 760
+IDEAL_WINDOW_WIDTH = 1360
+IDEAL_WINDOW_HEIGHT = 900
+BASE_MIN_WINDOW_WIDTH = 1040
+BASE_MIN_WINDOW_HEIGHT = 720
 SIDE_PANEL_WIDTH = 300
 APP_BG_COLOR = "#f4f6f8"
 SURFACE_COLOR = "#f4f6f8"
@@ -86,9 +86,14 @@ class PdfDeinjectionApp(CTkDnD):
         icon_path: Path | None = None,
     ) -> None:
         super().__init__()
+        self.screen_width = self.winfo_screenwidth()
+        self.screen_height = self.winfo_screenheight()
+        self.window_scaling = float(self._get_window_scaling())
+        self.min_window_width, self.min_window_height = self._compute_min_window_size()
+        self.default_window_width, self.default_window_height = self._compute_default_window_size()
         self.title("PDF Deinjection")
-        self.geometry(f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}")
-        self.minsize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
+        self.geometry(f"{self.default_window_width}x{self.default_window_height}")
+        self.minsize(self.min_window_width, self.min_window_height)
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
         self.configure(fg_color=APP_BG_COLOR)
@@ -122,7 +127,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.conflict_var = tk.StringVar(value=str(defaults.get("conflict_mode", "auto-rename")))
         self.include_subfolders_var = tk.BooleanVar(value=bool(defaults.get("include_subfolders", False)))
         self.log_visible = False
-        self.last_window_geometry = str(defaults.get("window_geometry", f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"))
+        self.last_window_geometry = str(defaults.get("window_geometry", f"{self.default_window_width}x{self.default_window_height}"))
 
         self._build_layout()
         self._restore_geometry(defaults.get("window_geometry"))
@@ -158,6 +163,24 @@ class PdfDeinjectionApp(CTkDnD):
             "include_subfolders": bool(self.include_subfolders_var.get()),
             "window_geometry": self.last_window_geometry,
         }
+
+    def _compute_min_window_size(self) -> tuple[int, int]:
+        min_width_actual = min(1240, max(BASE_MIN_WINDOW_WIDTH, int(self.screen_width * 0.52)))
+        min_height_actual = min(820, max(BASE_MIN_WINDOW_HEIGHT, int(self.screen_height * 0.62)))
+        return self._to_logical_window_size(min_width_actual, min_height_actual)
+
+    def _compute_default_window_size(self) -> tuple[int, int]:
+        default_width_actual = min(IDEAL_WINDOW_WIDTH, max(1180, int(self.screen_width * 0.68)))
+        default_height_actual = min(IDEAL_WINDOW_HEIGHT, max(760, int(self.screen_height * 0.76)))
+        default_width, default_height = self._to_logical_window_size(default_width_actual, default_height_actual)
+        default_width = max(self.min_window_width, default_width)
+        default_height = max(self.min_window_height, default_height)
+        return default_width, default_height
+
+    def _to_logical_window_size(self, width: int, height: int) -> tuple[int, int]:
+        logical_width = max(1, int(round(width / self.window_scaling)))
+        logical_height = max(1, int(round(height / self.window_scaling)))
+        return logical_width, logical_height
 
     def _build_layout(self) -> None:
         self.grid_columnconfigure(1, weight=1)
@@ -407,15 +430,17 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _normalize_geometry(self, geometry: str | None) -> str:
         if not geometry:
-            return f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+            return f"{self.default_window_width}x{self.default_window_height}"
 
         size_part, _, offset_part = geometry.partition("+")
         try:
             width_str, height_str = size_part.split("x", maxsplit=1)
-            width = max(MIN_WINDOW_WIDTH, int(width_str))
-            height = max(MIN_WINDOW_HEIGHT, int(height_str))
+            width = max(self.min_window_width, int(width_str))
+            height = max(self.min_window_height, int(height_str))
+            width = min(self.screen_width - 80, width)
+            height = min(self.screen_height - 80, height)
         except (ValueError, TypeError):
-            return f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+            return f"{self.default_window_width}x{self.default_window_height}"
 
         if offset_part:
             offsets = geometry[len(size_part):]

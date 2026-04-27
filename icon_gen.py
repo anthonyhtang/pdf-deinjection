@@ -111,9 +111,11 @@ def generate_icon(output_path: Path | None = None) -> Path:
         with Image.open(source_path) as source_image:
             prepared_source = source_image.convert("RGBA")
             frames = [_render_icon_from_source(prepared_source, size) for size in ICON_SIZES]
+            largest_frame = prepared_source.copy()
     else:
         frames = [_render_icon(size) for size in ICON_SIZES]
-    frames[0].save(target_path, format="ICO", sizes=[(size, size) for size in ICON_SIZES])
+        largest_frame = frames[-1]
+    largest_frame.save(target_path, format="ICO", sizes=[(size, size) for size in ICON_SIZES])
     return target_path
 
 

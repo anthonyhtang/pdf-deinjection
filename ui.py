@@ -47,6 +47,11 @@ DEFAULT_WINDOW_HEIGHT = 900
 MIN_WINDOW_WIDTH = 1180
 MIN_WINDOW_HEIGHT = 760
 SIDE_PANEL_WIDTH = 300
+APP_BG_COLOR = "#f4f6f8"
+SURFACE_COLOR = "#f4f6f8"
+CARD_COLOR = "#eef3f8"
+DROP_ZONE_COLOR = "#eef5ff"
+ACCENT_TEXT_COLOR = "#486284"
 
 
 @dataclass(slots=True)
@@ -86,6 +91,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.minsize(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         ctk.set_appearance_mode("light")
         ctk.set_default_color_theme("blue")
+        self.configure(fg_color=APP_BG_COLOR)
 
         self.icon_path = icon_path
         if icon_path is not None and icon_path.exists():
@@ -159,36 +165,36 @@ class PdfDeinjectionApp(CTkDnD):
         self.grid_rowconfigure(1, weight=0)
         self.grid_rowconfigure(2, weight=0)
 
-        self.main_frame = ctk.CTkFrame(self, corner_radius=0)
+        self.main_frame = ctk.CTkFrame(self, corner_radius=0, fg_color=SURFACE_COLOR)
         self.main_frame.grid(row=0, column=0, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=0, minsize=SIDE_PANEL_WIDTH)
         self.main_frame.grid_columnconfigure(1, weight=1)
         self.main_frame.grid_columnconfigure(2, weight=0, minsize=SIDE_PANEL_WIDTH)
         self.main_frame.grid_rowconfigure(0, weight=1)
 
-        self.left_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH)
+        self.left_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH, fg_color=CARD_COLOR)
         self.left_panel.grid(row=0, column=0, sticky="nsew", padx=(12, 6), pady=12)
         self.left_panel.grid_propagate(False)
         self.left_panel.grid_rowconfigure(1, weight=1)
         self.left_panel.grid_columnconfigure(0, weight=1)
 
-        self.center_panel = ctk.CTkFrame(self.main_frame)
+        self.center_panel = ctk.CTkFrame(self.main_frame, fg_color=CARD_COLOR)
         self.center_panel.grid(row=0, column=1, sticky="nsew", padx=6, pady=12)
         self.center_panel.grid_rowconfigure(0, weight=1)
         self.center_panel.grid_columnconfigure(0, weight=1)
 
-        self.right_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH)
+        self.right_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH, fg_color=CARD_COLOR)
         self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
         self.right_panel.grid_propagate(False)
         self.right_panel.grid_rowconfigure(0, weight=1)
         self.right_panel.grid_columnconfigure(0, weight=1)
 
-        self.bottom_bar = ctk.CTkFrame(self, height=94)
+        self.bottom_bar = ctk.CTkFrame(self, height=94, fg_color=CARD_COLOR)
         self.bottom_bar.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 8))
         self.bottom_bar.grid_columnconfigure(0, weight=1)
         self.bottom_bar.grid_columnconfigure(1, weight=0)
 
-        self.log_container = ctk.CTkFrame(self)
+        self.log_container = ctk.CTkFrame(self, fg_color=CARD_COLOR)
         self.log_container.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
         self.log_container.grid_columnconfigure(0, weight=1)
 
@@ -199,7 +205,7 @@ class PdfDeinjectionApp(CTkDnD):
         self._build_log_panel()
 
     def _build_left_panel(self) -> None:
-        self.drop_zone = ctk.CTkFrame(self.left_panel, fg_color=("#eef5ff", "#eef5ff"), corner_radius=12)
+        self.drop_zone = ctk.CTkFrame(self.left_panel, fg_color=DROP_ZONE_COLOR, corner_radius=12)
         self.drop_zone.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 10))
         self.drop_zone.grid_columnconfigure(0, weight=1)
 
@@ -209,7 +215,7 @@ class PdfDeinjectionApp(CTkDnD):
             bd=0,
             highlightthickness=0,
             relief="flat",
-            background="#eef5ff",
+            background=DROP_ZONE_COLOR,
         )
         self.drop_canvas.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
         self.drop_canvas.create_rectangle(12, 12, 220, 124, outline="#7ca0d6", width=2, dash=(6, 4))
@@ -219,6 +225,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.file_list = ctk.CTkScrollableFrame(self.left_panel, label_text="Queue")
         self.file_list.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
         self.file_list.grid_columnconfigure(0, weight=1)
+        self.file_list.configure(fg_color="#f7f9fb")
 
         controls = ctk.CTkFrame(self.left_panel, fg_color="transparent")
         controls.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 12))
@@ -231,7 +238,7 @@ class PdfDeinjectionApp(CTkDnD):
         ctk.CTkCheckBox(controls, text="Include Subfolders", variable=self.include_subfolders_var).grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _build_center_panel(self) -> None:
-        preview_holder = ctk.CTkFrame(self.center_panel)
+        preview_holder = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
         preview_holder.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
         preview_holder.grid_rowconfigure(0, weight=1)
         preview_holder.grid_columnconfigure(0, weight=1)
@@ -239,7 +246,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.preview_label = ctk.CTkLabel(preview_holder, text="", compound="center")
         self.preview_label.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-        metadata = ctk.CTkFrame(self.center_panel)
+        metadata = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
         metadata.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
         metadata.grid_columnconfigure((0, 1), weight=1)
 
@@ -253,7 +260,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.meta_estimated.grid(row=1, column=1, sticky="ew", padx=10, pady=(0, 10))
 
     def _build_right_panel(self) -> None:
-        self.settings_panel = ctk.CTkScrollableFrame(self.right_panel, fg_color="transparent")
+        self.settings_panel = ctk.CTkScrollableFrame(self.right_panel, fg_color=CARD_COLOR)
         self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         self.settings_panel.grid_columnconfigure(0, weight=1)
 
@@ -336,7 +343,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.start_button.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
 
     def _build_bottom_bar(self) -> None:
-        progress_panel = ctk.CTkFrame(self.bottom_bar, fg_color="transparent")
+        progress_panel = ctk.CTkFrame(self.bottom_bar, fg_color=CARD_COLOR)
         progress_panel.grid(row=0, column=0, sticky="ew", padx=12, pady=12)
         progress_panel.grid_columnconfigure(0, weight=1)
 
@@ -352,7 +359,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.file_progress.grid(row=3, column=0, sticky="ew", pady=(4, 0))
         self.file_progress.set(0)
 
-        action_panel = ctk.CTkFrame(self.bottom_bar, fg_color="transparent")
+        action_panel = ctk.CTkFrame(self.bottom_bar, fg_color=CARD_COLOR)
         action_panel.grid(row=0, column=1, sticky="e", padx=12, pady=12)
 
         self.status_label = ctk.CTkLabel(action_panel, text="Ready", anchor="e")
@@ -364,7 +371,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.log_toggle = ctk.CTkButton(self.log_container, text="▲ Show Log", width=120, command=self.toggle_log_panel)
         self.log_toggle.grid(row=0, column=0, sticky="w", padx=12, pady=(12, 0))
 
-        self.log_body = ctk.CTkFrame(self.log_container)
+        self.log_body = ctk.CTkFrame(self.log_container, fg_color="#f7f9fb")
         self.log_body.grid(row=1, column=0, sticky="ew", padx=12, pady=12)
         self.log_body.grid_columnconfigure(0, weight=1)
 
@@ -483,34 +490,12 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _show_preview_placeholder(self, message: str | None = None) -> None:
         placeholder = message or "Select a PDF to preview"
-        placeholder_image = self._create_placeholder_image()
-        self.preview_photo = ctk.CTkImage(light_image=placeholder_image, dark_image=placeholder_image, size=placeholder_image.size)
         self.preview_label.configure(
-            image=self.preview_photo,
-            text=f"\n{placeholder}",
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color="#486284",
+            image=None,
+            text=f"PDF Preview\n\n{placeholder}",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=ACCENT_TEXT_COLOR,
         )
-
-    def _create_placeholder_image(self) -> Image.Image:
-        image = Image.new("RGBA", (420, 420), "#f7fbff")
-        draw = ImageDraw.Draw(image)
-
-        draw.rounded_rectangle((26, 26, 394, 394), radius=28, fill="#eef5ff", outline="#d2e3fb", width=2)
-        draw.rounded_rectangle((104, 74, 296, 324), radius=24, fill="#ffffff", outline="#bed2ef", width=3)
-        draw.polygon([(250, 74), (296, 74), (296, 122)], fill="#dde8f9", outline="#bed2ef")
-
-        draw.rounded_rectangle((135, 280, 265, 298), radius=9, fill="#d8e6f8")
-        draw.rounded_rectangle((150, 312, 250, 330), radius=9, fill="#e3eefc")
-
-        draw.rounded_rectangle((214, 210, 314, 248), radius=12, fill="#ee7d5b")
-        draw.rectangle((314, 225, 344, 233), fill="#ee7d5b")
-        draw.rectangle((194, 223, 214, 235), fill="#ee7d5b")
-        draw.line((200, 320, 342, 192), fill="#d94841", width=11)
-        draw.ellipse((60, 308, 118, 366), fill="#d7e9ff")
-        draw.text((74, 322), "PDF", fill="#22508f")
-
-        return image
 
     def _update_metadata_strip(self) -> None:
         if self.selected_path is None or self.selected_path not in self.queue_entries:

@@ -11,7 +11,7 @@ from tkinter import filedialog, messagebox
 from typing import Any
 
 import customtkinter as ctk
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageOps
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from processor import (
@@ -47,6 +47,8 @@ IDEAL_WINDOW_HEIGHT = 900
 BASE_MIN_WINDOW_WIDTH = 1040
 BASE_MIN_WINDOW_HEIGHT = 720
 SIDE_PANEL_WIDTH = 300
+SIDE_PANEL_MIN_ACTUAL = 248
+SIDE_PANEL_MAX_ACTUAL = 336
 APP_BG_COLOR = "#f4f6f8"
 SURFACE_COLOR = "#f4f6f8"
 CARD_COLOR = "#eef3f8"
@@ -117,6 +119,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.row_widgets: dict[Path, ctk.CTkFrame] = {}
         self.selected_path: Path | None = None
         self.preview_photo: ctk.CTkImage | None = None
+        self.preview_source_image: Image.Image | None = None
 
         defaults = config or {}
         self.dpi_var = tk.IntVar(value=int(defaults.get("dpi", 150)))
@@ -241,9 +244,7 @@ class PdfDeinjectionApp(CTkDnD):
             background=DROP_ZONE_COLOR,
         )
         self.drop_canvas.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
-        self.drop_canvas.create_rectangle(12, 12, 220, 124, outline="#7ca0d6", width=2, dash=(6, 4))
-        self.drop_canvas.create_text(116, 44, text="PDF", fill="#1f4a8a", font=("Segoe UI", 24, "bold"))
-        self.drop_canvas.create_text(116, 88, text="Drop PDFs here", fill="#4e6e9d", font=("Segoe UI", 13))
+        self._redraw_drop_zone()
 
         self.file_list = ctk.CTkScrollableFrame(self.left_panel, label_text="Queue")
         self.file_list.grid(row=1, column=0, sticky="nsew", padx=12, pady=(0, 10))
@@ -261,25 +262,25 @@ class PdfDeinjectionApp(CTkDnD):
         ctk.CTkCheckBox(controls, text="Include Subfolders", variable=self.include_subfolders_var).grid(row=2, column=0, columnspan=2, sticky="w", pady=(10, 0))
 
     def _build_center_panel(self) -> None:
-        preview_holder = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
-        preview_holder.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
-        preview_holder.grid_rowconfigure(0, weight=1)
-        preview_holder.grid_columnconfigure(0, weight=1)
+        self.preview_holder = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
+        self.preview_holder.grid(row=0, column=0, sticky="nsew", padx=12, pady=12)
+        self.preview_holder.grid_rowconfigure(0, weight=1)
+        self.preview_holder.grid_columnconfigure(0, weight=1)
 
-        self.preview_label = ctk.CTkLabel(preview_holder, text="", compound="center")
+        self.preview_label = ctk.CTkLabel(self.preview_holder, text="", compound="center")
         self.preview_label.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-        metadata = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
-        metadata.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
-        metadata.grid_columnconfigure((0, 1), weight=1)
+        self.metadata_frame = ctk.CTkFrame(self.center_panel, fg_color="#f7f9fb")
+        self.metadata_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 12))
+        self.metadata_frame.grid_columnconfigure((0, 1), weight=1)
 
-        self.meta_filename = ctk.CTkLabel(metadata, text="Filename: -", anchor="w")
+        self.meta_filename = ctk.CTkLabel(self.metadata_frame, text="Filename: -", anchor="w")
         self.meta_filename.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 4))
-        self.meta_pages = ctk.CTkLabel(metadata, text="Pages: -", anchor="w")
+        self.meta_pages = ctk.CTkLabel(self.metadata_frame, text="Pages: -", anchor="w")
         self.meta_pages.grid(row=0, column=1, sticky="ew", padx=10, pady=(10, 4))
-        self.meta_size = ctk.CTkLabel(metadata, text="File size: -", anchor="w")
+        self.meta_size = ctk.CTkLabel(self.metadata_frame, text="File size: -", anchor="w")
         self.meta_size.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
-        self.meta_estimated = ctk.CTkLabel(metadata, text="Estimated output: -", anchor="w")
+        self.meta_estimated = ctk.CTkLabel(self.metadata_frame, text="Estimated output: -", anchor="w")
         self.meta_estimated.grid(row=1, column=1, sticky="ew", padx=10, pady=(0, 10))
 
     def _build_right_panel(self) -> None:
@@ -417,6 +418,11 @@ class PdfDeinjectionApp(CTkDnD):
             self.last_window_geometry = self.geometry()
         except tk.TclError:
             pass
+        try:
+            if self.winfo_exists():
+                self._apply_responsive_layout()
+        except tk.TclError:
+            pass
 
     def _restore_geometry(self, geometry: str | None) -> None:
         target_geometry = self._normalize_geometry(geometry)
@@ -424,9 +430,70 @@ class PdfDeinjectionApp(CTkDnD):
             self.geometry(target_geometry)
             self.last_window_geometry = target_geometry
         except tk.TclError:
-            fallback_geometry = f"{DEFAULT_WINDOW_WIDTH}x{DEFAULT_WINDOW_HEIGHT}"
+            fallback_geometry = f"{self.default_window_width}x{self.default_window_height}"
             self.geometry(fallback_geometry)
             self.last_window_geometry = fallback_geometry
+
+    def _apply_responsive_layout(self) -> None:
+        try:
+            width = self.winfo_width()
+            height = self.winfo_height()
+        except tk.TclError:
+            return
+        if width <= 1 or height <= 1:
+            return
+
+        panel_width_actual = max(SIDE_PANEL_MIN_ACTUAL, min(SIDE_PANEL_MAX_ACTUAL, int(width * 0.22)))
+        panel_width = max(190, int(round(panel_width_actual / self.window_scaling)))
+
+        self.left_panel.configure(width=panel_width)
+        self.right_panel.configure(width=panel_width)
+        self.main_frame.grid_columnconfigure(0, minsize=panel_width)
+        self.main_frame.grid_columnconfigure(2, minsize=panel_width)
+
+        metadata_font_size = 12 if width < 1280 else 13
+        placeholder_font_size = 16 if width < 1280 else 20
+        for label in (self.meta_filename, self.meta_pages, self.meta_size, self.meta_estimated):
+            label.configure(font=ctk.CTkFont(size=metadata_font_size))
+
+        self._redraw_drop_zone()
+        if self.preview_source_image is not None:
+            self._display_preview_image(self.preview_source_image)
+        else:
+            current_text = self.preview_label.cget("text") or "PDF Preview\n\nSelect a PDF to preview"
+            self.preview_label.configure(font=ctk.CTkFont(size=placeholder_font_size, weight="bold"), text=current_text)
+
+    def _redraw_drop_zone(self) -> None:
+        canvas_width = max(180, self.drop_canvas.winfo_width() or 220)
+        canvas_height = max(120, self.drop_canvas.winfo_height() or 140)
+        self.drop_canvas.delete("all")
+        self.drop_canvas.configure(width=canvas_width, height=canvas_height)
+
+        margin_x = 14
+        margin_y = 14
+        self.drop_canvas.create_rectangle(
+            margin_x,
+            margin_y,
+            canvas_width - margin_x,
+            canvas_height - margin_y,
+            outline="#7ca0d6",
+            width=2,
+            dash=(6, 4),
+        )
+        self.drop_canvas.create_text(
+            canvas_width / 2,
+            canvas_height * 0.38,
+            text="PDF",
+            fill="#1f4a8a",
+            font=("Segoe UI", max(18, int(canvas_height * 0.16)), "bold"),
+        )
+        self.drop_canvas.create_text(
+            canvas_width / 2,
+            canvas_height * 0.62,
+            text="Drop PDFs here",
+            fill="#4e6e9d",
+            font=("Segoe UI", max(11, int(canvas_height * 0.09))),
+        )
 
     def _normalize_geometry(self, geometry: str | None) -> str:
         if not geometry:
@@ -500,27 +567,37 @@ class PdfDeinjectionApp(CTkDnD):
 
         entry = self.queue_entries[self.selected_path]
         if entry.status == "error" and entry.error_message:
+            self.preview_source_image = None
             self._show_preview_placeholder(entry.error_message)
             self._update_metadata_strip()
             return
 
         try:
             preview_image = render_preview(entry.path, dpi=96)
-            fitted = ImageOps.contain(preview_image, (420, 420))
-            self.preview_photo = ctk.CTkImage(light_image=fitted, dark_image=fitted, size=fitted.size)
-            self.preview_label.configure(image=self.preview_photo, text="")
+            self.preview_source_image = preview_image
+            self._display_preview_image(preview_image)
         except Exception as exc:
+            self.preview_source_image = None
             self._show_preview_placeholder(str(exc))
         self._update_metadata_strip()
 
     def _show_preview_placeholder(self, message: str | None = None) -> None:
         placeholder = message or "Select a PDF to preview"
+        width = max(self.winfo_width(), self.default_window_width)
+        font_size = 16 if width < 1280 else 20
         self.preview_label.configure(
             image=None,
             text=f"PDF Preview\n\n{placeholder}",
-            font=ctk.CTkFont(size=20, weight="bold"),
+            font=ctk.CTkFont(size=font_size, weight="bold"),
             text_color=ACCENT_TEXT_COLOR,
         )
+
+    def _display_preview_image(self, source_image: Image.Image) -> None:
+        preview_width = max(260, self.preview_holder.winfo_width() - 44)
+        preview_height = max(260, self.preview_holder.winfo_height() - 44)
+        fitted = ImageOps.contain(source_image, (preview_width, preview_height))
+        self.preview_photo = ctk.CTkImage(light_image=fitted, dark_image=fitted, size=fitted.size)
+        self.preview_label.configure(image=self.preview_photo, text="")
 
     def _update_metadata_strip(self) -> None:
         if self.selected_path is None or self.selected_path not in self.queue_entries:

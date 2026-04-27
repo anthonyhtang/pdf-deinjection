@@ -54,6 +54,7 @@ SURFACE_COLOR = "#f4f6f8"
 CARD_COLOR = "#eef3f8"
 DROP_ZONE_COLOR = "#eef5ff"
 ACCENT_TEXT_COLOR = "#486284"
+RIGHT_PANEL_INNER_PADX = 10
 
 
 @dataclass(slots=True)
@@ -285,7 +286,7 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _build_right_panel(self) -> None:
         self.settings_panel = ctk.CTkScrollableFrame(self.right_panel, fg_color=CARD_COLOR)
-        self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=(RIGHT_PANEL_INNER_PADX, RIGHT_PANEL_INNER_PADX), pady=0)
         self.settings_panel.grid_columnconfigure(0, weight=1)
 
         panel = self.settings_panel
@@ -364,7 +365,7 @@ class PdfDeinjectionApp(CTkDnD):
             height=44,
             command=self.on_start_cancel,
         )
-        self.start_button.grid(row=1, column=0, sticky="ew", padx=14, pady=(0, 14))
+        self.start_button.grid(row=1, column=0, sticky="ew", padx=(RIGHT_PANEL_INNER_PADX + 14, RIGHT_PANEL_INNER_PADX + 14), pady=(0, 14))
 
     def _build_bottom_bar(self) -> None:
         progress_panel = ctk.CTkFrame(self.bottom_bar, fg_color=CARD_COLOR)

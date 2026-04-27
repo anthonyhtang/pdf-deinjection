@@ -43,7 +43,7 @@ STATUS_COLORS = {
 
 PRESET_DPI_VALUES = (96, 150, 200, 300)
 IDEAL_WINDOW_WIDTH = 1360
-IDEAL_WINDOW_HEIGHT = 1200
+IDEAL_WINDOW_HEIGHT = 1280
 BASE_MIN_WINDOW_WIDTH = 1040
 BASE_MIN_WINDOW_HEIGHT = 880
 SIDE_PANEL_WIDTH = 300
@@ -178,7 +178,7 @@ class PdfDeinjectionApp(CTkDnD):
 
     def _compute_default_window_size(self) -> tuple[int, int]:
         default_width_actual = min(IDEAL_WINDOW_WIDTH, max(1180, int(self.screen_width * 0.68)))
-        default_height_actual = min(int(self.screen_height * 0.9), max(1000, int(self.screen_height * 0.88)))
+        default_height_actual = min(int(self.screen_height * 0.95), max(1040, int(self.screen_height * 0.92)))
         default_width, default_height = self._to_logical_window_size(default_width_actual, default_height_actual)
         default_width = max(self.min_window_width, default_width)
         default_height = max(self.min_window_height, default_height)
@@ -513,8 +513,8 @@ class PdfDeinjectionApp(CTkDnD):
         size_part, _, offset_part = geometry.partition("+")
         try:
             width_str, height_str = size_part.split("x", maxsplit=1)
-            width = max(self.min_window_width, int(width_str))
-            height = max(self.min_window_height, int(height_str))
+            width = max(self.default_window_width, int(width_str))
+            height = max(self.default_window_height, int(height_str))
             width = min(self.screen_width - 80, width)
             height = min(self.screen_height - 80, height)
         except (ValueError, TypeError):

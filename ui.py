@@ -49,12 +49,15 @@ BASE_MIN_WINDOW_HEIGHT = 720
 SIDE_PANEL_WIDTH = 300
 SIDE_PANEL_MIN_ACTUAL = 248
 SIDE_PANEL_MAX_ACTUAL = 336
+RIGHT_PANEL_WIDTH = 348
+RIGHT_PANEL_MIN_ACTUAL = 320
+RIGHT_PANEL_MAX_ACTUAL = 408
 APP_BG_COLOR = "#f4f6f8"
 SURFACE_COLOR = "#f4f6f8"
 CARD_COLOR = "#eef3f8"
 DROP_ZONE_COLOR = "#eef5ff"
 ACCENT_TEXT_COLOR = "#486284"
-RIGHT_PANEL_INNER_PADX = 10
+RIGHT_PANEL_INNER_PADX = 18
 
 
 @dataclass(slots=True)
@@ -196,7 +199,7 @@ class PdfDeinjectionApp(CTkDnD):
         self.main_frame.grid(row=0, column=0, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=0, minsize=SIDE_PANEL_WIDTH)
         self.main_frame.grid_columnconfigure(1, weight=1)
-        self.main_frame.grid_columnconfigure(2, weight=0, minsize=SIDE_PANEL_WIDTH)
+        self.main_frame.grid_columnconfigure(2, weight=0, minsize=RIGHT_PANEL_WIDTH)
         self.main_frame.grid_rowconfigure(0, weight=1)
 
         self.left_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH, fg_color=CARD_COLOR)
@@ -210,8 +213,8 @@ class PdfDeinjectionApp(CTkDnD):
         self.center_panel.grid_rowconfigure(0, weight=1)
         self.center_panel.grid_columnconfigure(0, weight=1)
 
-        self.right_panel = ctk.CTkFrame(self.main_frame, width=SIDE_PANEL_WIDTH, fg_color=CARD_COLOR)
-        self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
+        self.right_panel = ctk.CTkFrame(self.main_frame, width=RIGHT_PANEL_WIDTH, fg_color=CARD_COLOR)
+        self.right_panel.grid(row=0, column=2, sticky="nsew", padx=(6, 18), pady=12)
         self.right_panel.grid_propagate(False)
         self.right_panel.grid_rowconfigure(0, weight=1)
         self.right_panel.grid_columnconfigure(0, weight=1)
@@ -285,8 +288,12 @@ class PdfDeinjectionApp(CTkDnD):
         self.meta_estimated.grid(row=1, column=1, sticky="ew", padx=10, pady=(0, 10))
 
     def _build_right_panel(self) -> None:
-        self.settings_panel = ctk.CTkScrollableFrame(self.right_panel, fg_color=CARD_COLOR)
-        self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=(RIGHT_PANEL_INNER_PADX, RIGHT_PANEL_INNER_PADX), pady=0)
+        self.settings_panel = ctk.CTkScrollableFrame(
+            self.right_panel,
+            width=RIGHT_PANEL_WIDTH,
+            fg_color=CARD_COLOR,
+        )
+        self.settings_panel.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         self.settings_panel.grid_columnconfigure(0, weight=1)
 
         panel = self.settings_panel
@@ -365,7 +372,7 @@ class PdfDeinjectionApp(CTkDnD):
             height=44,
             command=self.on_start_cancel,
         )
-        self.start_button.grid(row=1, column=0, sticky="ew", padx=(RIGHT_PANEL_INNER_PADX + 14, RIGHT_PANEL_INNER_PADX + 14), pady=(0, 14))
+        self.start_button.grid(row=1, column=0, sticky="ew", padx=RIGHT_PANEL_INNER_PADX, pady=(0, 14))
 
     def _build_bottom_bar(self) -> None:
         progress_panel = ctk.CTkFrame(self.bottom_bar, fg_color=CARD_COLOR)
@@ -444,13 +451,16 @@ class PdfDeinjectionApp(CTkDnD):
         if width <= 1 or height <= 1:
             return
 
-        panel_width_actual = max(SIDE_PANEL_MIN_ACTUAL, min(SIDE_PANEL_MAX_ACTUAL, int(width * 0.22)))
-        panel_width = max(190, int(round(panel_width_actual / self.window_scaling)))
+        left_panel_width_actual = max(SIDE_PANEL_MIN_ACTUAL, min(SIDE_PANEL_MAX_ACTUAL, int(width * 0.22)))
+        right_panel_width_actual = max(RIGHT_PANEL_MIN_ACTUAL, min(RIGHT_PANEL_MAX_ACTUAL, int(width * 0.27)))
+        left_panel_width = max(190, int(round(left_panel_width_actual / self.window_scaling)))
+        right_panel_width = max(220, int(round(right_panel_width_actual / self.window_scaling)))
 
-        self.left_panel.configure(width=panel_width)
-        self.right_panel.configure(width=panel_width)
-        self.main_frame.grid_columnconfigure(0, minsize=panel_width)
-        self.main_frame.grid_columnconfigure(2, minsize=panel_width)
+        self.left_panel.configure(width=left_panel_width)
+        self.right_panel.configure(width=right_panel_width)
+        self.settings_panel.configure(width=max(220, right_panel_width))
+        self.main_frame.grid_columnconfigure(0, minsize=left_panel_width)
+        self.main_frame.grid_columnconfigure(2, minsize=right_panel_width)
 
         metadata_font_size = 12 if width < 1280 else 13
         placeholder_font_size = 16 if width < 1280 else 20
